@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sample Apple Music library export (small, synthetic) so the connector
+  runs end-to-end without a personal export. Replace this with your own
+  file from Music -> File -> Library -> Export Library...
+-->
+<plist version="1.0">
+<dict>
+  <key>Major Version</key><integer>1</integer>
+  <key>Minor Version</key><integer>1</integer>
+  <key>Application Version</key><string>1.5.0</string>
+  <key>Tracks</key>
+  <dict>
+    <key>101</key>
+    <dict>
+      <key>Track ID</key><integer>101</integer>
+      <key>Name</key><string>Golden Hour</string>
+      <key>Artist</key><string>Sunbeam Avenue</string>
+      <key>Genre</key><string>Pop</string>
+      <key>Play Count</key><integer>92</integer>
+    </dict>
+    <key>102</key>
+    <dict>
+      <key>Track ID</key><integer>102</integer>
+      <key>Name</key><string>Neon Weekend</string>
+      <key>Artist</key><string>Sunbeam Avenue</string>
+      <key>Genre</key><string>Pop</string>
+      <key>Play Count</key><integer>68</integer>
+    </dict>
+    <key>103</key>
+    <dict>
+      <key>Track ID</key><integer>103</integer>
+      <key>Name</key><string>Paper Streets</string>
+      <key>Artist</key><string>The Quiet Parade</string>
+      <key>Genre</key><string>Alternative</string>
+      <key>Play Count</key><integer>41</integer>
+    </dict>
+    <key>104</key>
+    <dict>
+      <key>Track ID</key><integer>104</integer>
+      <key>Name</key><string>Blue Note Diner</string>
+      <key>Artist</key><string>After Hours Trio</string>
+      <key>Genre</key><string>Jazz</string>
+      <key>Play Count</key><integer>33</integer>
+    </dict>
+    <key>105</key>
+    <dict>
+      <key>Track ID</key><integer>105</integer>
+      <key>Name</key><string>Sidewalk Flow</string>
+      <key>Artist</key><string>MC Overcast</string>
+      <key>Genre</key><string>Hip-Hop/Rap</string>
+      <key>Play Count</key><integer>27</integer>
+    </dict>
+    <key>106</key>
+    <dict>
+      <key>Track ID</key><integer>106</integer>
+      <key>Name</key><string>Static Garden</string>
+      <key>Artist</key><string>Voltline</string>
+      <key>Genre</key><string>Rock</string>
+      <key>Play Count</key><integer>19</integer>
+    </dict>
+    <key>107</key>
+    <dict>
+      <key>Track ID</key><integer>107</integer>
+      <key>Name</key><string>Slow Satellite</string>
+      <key>Artist</key><string>Dusk Collective</string>
+      <key>Genre</key><string>R&amp;B/Soul</string>
+      <key>Play Count</key><integer>14</integer>
+    </dict>
+    <key>108</key>
+    <dict>
+      <key>Track ID</key><integer>108</integer>
+      <key>Name</key><string>Untitled Demo</string>
+      <key>Artist</key><string>Unknown</string>
+      <key>Genre</key><string>Pop</string>
+      <key>Play Count</key><integer>3</integer>
+    </dict>
+  </dict>
+  <key>Playlists</key>
+  <array/>
+</dict>
+</plist>

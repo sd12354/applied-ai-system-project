@@ -2,12 +2,13 @@
 Command-line entry point for the VibeFinder Agent.
 
 Usage:
-    python -m src.main "chill lofi for studying"   # answer one request
-    python -m src.main                             # run a few sample requests
+    python -m src.main "chill lofi for studying"       # answer one request
+    python -m src.main                                 # run a few sample requests
+    python -m src.main --library data/sample_library.xml   # use an Apple Music export
 
-The agent parses your words into a taste profile, recommends songs,
-checks its own work, and prints the result with a confidence score and a
-short trace of what it did.
+The agent parses your words (or your Apple Music listening history) into a
+taste profile, recommends songs, checks its own work, and prints the
+result with a confidence score and a short trace of what it did.
 """
 
 import sys
@@ -48,7 +49,16 @@ def print_result(result) -> None:
 
 def main() -> None:
     agent = RecommenderAgent()
-    queries = [" ".join(sys.argv[1:])] if len(sys.argv) > 1 else SAMPLE_QUERIES
+    args = sys.argv[1:]
+
+    if args and args[0] == "--library":
+        if len(args) < 2:
+            print("usage: python -m src.main --library <path to Library.xml>")
+            return
+        print_result(agent.run_from_library(args[1]))
+        return
+
+    queries = [" ".join(args)] if args else SAMPLE_QUERIES
     for query in queries:
         print_result(agent.run(query))
 

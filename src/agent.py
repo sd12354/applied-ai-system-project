@@ -26,6 +26,8 @@ import statistics
 from src.recommender import load_songs, recommend_songs, UserProfile
 from src.planner import parse_request, Plan
 from src.evaluator import evaluate, EvalResult, CONFIDENCE_THRESHOLD
+from src.connectors.apple_music import parse_library
+from src.profile_builder import build_plan_from_library
 
 MAX_ATTEMPTS = 3
 DEFAULT_CSV = "data/songs.csv"
@@ -91,9 +93,26 @@ class RecommenderAgent:
         return round(statistics.mean(s["energy"] for s in matches), 2)
 
     def run(self, query: str, k: int = 5) -> AgentResult:
+        """Answer a natural-language request."""
         plan: Plan = parse_request(query, k)
+        return self._execute(plan, label=query)
+
+    def run_from_library(self, xml_path: str, k: int = 5) -> AgentResult:
+        """Answer from an Apple Music library export instead of a text query.
+
+        Parses the exported Library.xml, infers a taste profile from the
+        listening history, then runs the same self-checking loop.
+        """
+        tracks = parse_library(xml_path)
+        plan: Plan = build_plan_from_library(tracks, self.songs, k)
+        label = f"Apple Music library ({os.path.basename(xml_path)}, {len(tracks)} tracks)"
+        return self._execute(plan, label=label)
+
+    def _execute(self, plan: Plan, label: str) -> AgentResult:
+        query = label
+        k = plan.k
         profile = plan.profile
-        self.log.info("PLAN   query=%r -> profile=%s", query, profile)
+        self.log.info("PLAN   source=%r -> profile=%s", label, profile)
         for line in plan.trace:
             self.log.info("PLAN     %s", line)
 
