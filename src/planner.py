@@ -66,6 +66,7 @@ class Plan:
     k: int
     trace: List[str]
     recognized: bool  # False when the query gave the planner nothing to work with
+    energy_specified: bool = False  # True when an energy cue was found (not the default)
 
 
 def _first_match(query: str, mapping) -> Optional[str]:
@@ -95,9 +96,11 @@ def parse_request(query: str, k: int = 5) -> Plan:
         trace.append(f"mood -> '{mood}' (matched a mood word)")
 
     energy = None
+    energy_specified = False
     for words, value in ENERGY_WORDS:
         if any(w in text for w in words):
             energy = value
+            energy_specified = True
             trace.append(f"energy -> {value} (context word implied this)")
             break
     if energy is None:
@@ -118,4 +121,10 @@ def parse_request(query: str, k: int = 5) -> Plan:
         target_energy=energy,
         likes_acoustic=likes_acoustic,
     )
-    return Plan(profile=profile, k=k, trace=trace, recognized=recognized)
+    return Plan(
+        profile=profile,
+        k=k,
+        trace=trace,
+        recognized=recognized,
+        energy_specified=energy_specified,
+    )

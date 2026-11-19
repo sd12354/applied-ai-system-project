@@ -1,66 +1,56 @@
 """
-Command line runner for the Music Recommender Simulation.
+Command-line entry point for the VibeFinder Agent.
 
-Run it from the project root with:
+Usage:
+    python -m src.main "chill lofi for studying"   # answer one request
+    python -m src.main                             # run a few sample requests
 
-    python -m src.main
-
-It loads the song catalog and prints the top recommendations for a few
-different user profiles so you can see how the recommender reacts to
-very different tastes.
+The agent parses your words into a taste profile, recommends songs,
+checks its own work, and prints the result with a confidence score and a
+short trace of what it did.
 """
 
-from src.recommender import load_songs, recommend_songs
+import sys
+
+from src.agent import RecommenderAgent
+
+# Requests used when no query is passed on the command line.
+SAMPLE_QUERIES = [
+    "upbeat pop for a workout",
+    "chill lofi for studying",
+    "some jazz",
+    "",  # shows the vague-input guardrail
+]
 
 
-# A few example users with clearly different tastes. The keys here match
-# what score_song expects: "genre", "mood", "energy" and the optional
-# "likes_acoustic".
-PROFILES = {
-    "High-Energy Pop": {
-        "genre": "pop",
-        "mood": "happy",
-        "energy": 0.85,
-        "likes_acoustic": False,
-    },
-    "Chill Lofi": {
-        "genre": "lofi",
-        "mood": "chill",
-        "energy": 0.35,
-        "likes_acoustic": True,
-    },
-    "Deep Intense Rock": {
-        "genre": "rock",
-        "mood": "intense",
-        "energy": 0.95,
-        "likes_acoustic": False,
-    },
-}
-
-
-def print_recommendations(name: str, user_prefs: dict, songs: list, k: int = 5) -> None:
-    """Print one profile's top ``k`` recommendations in a readable block."""
-    print("=" * 60)
-    print(f"Profile: {name}")
+def print_result(result) -> None:
+    print("=" * 64)
+    print(f'Request: "{result.query}"')
     print(
-        f"  wants genre={user_prefs['genre']}, mood={user_prefs['mood']}, "
-        f"energy={user_prefs['energy']}, likes_acoustic={user_prefs.get('likes_acoustic', False)}"
+        f"  understood as: genre={result.profile.favorite_genre or '-'}, "
+        f"mood={result.profile.favorite_mood or '-'}, "
+        f"energy={result.profile.target_energy}, "
+        f"acoustic={result.profile.likes_acoustic}"
     )
-    print("-" * 60)
-
-    recommendations = recommend_songs(user_prefs, songs, k=k)
-    for rank, (song, score, explanation) in enumerate(recommendations, start=1):
+    print(f"  confidence: {result.confidence:.2f}   "
+          f"attempts: {result.attempts}   passed checks: {result.passed}")
+    if result.advisory:
+        print(f"  note: {result.advisory}")
+    print("-" * 64)
+    for rank, (song, score, explanation) in enumerate(result.recommendations, start=1):
         print(f"{rank}. {song['title']} by {song['artist']}  (score {score:.2f})")
         print(f"   because: {explanation}")
+    print("  trace:")
+    for step in result.trace:
+        print(f"    - {step}")
     print()
 
 
 def main() -> None:
-    songs = load_songs("data/songs.csv")
-    print(f"Loaded {len(songs)} songs from the catalog.\n")
-
-    for name, user_prefs in PROFILES.items():
-        print_recommendations(name, user_prefs, songs, k=5)
+    agent = RecommenderAgent()
+    queries = [" ".join(sys.argv[1:])] if len(sys.argv) > 1 else SAMPLE_QUERIES
+    for query in queries:
+        print_result(agent.run(query))
 
 
 if __name__ == "__main__":

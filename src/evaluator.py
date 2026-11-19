@@ -26,9 +26,15 @@ from src.recommender import (
     ACOUSTIC_WEIGHT,
 )
 
+# The score a "perfect" song would earn: an exact genre, mood and energy
+# match plus the acoustic bonus. Confidence is measured against this fixed
+# ceiling, so a vague request (which can satisfy only part of it) honestly
+# scores low, and a fully-specified, well-matched request scores high.
+FULL_MATCH_SCORE = GENRE_WEIGHT + MOOD_WEIGHT + ENERGY_WEIGHT + ACOUSTIC_WEIGHT  # 5.0
+
 # A run is considered confident when the top pick clears this fraction of
-# the best score it could possibly have earned for this profile.
-CONFIDENCE_THRESHOLD = 0.60
+# a perfect match.
+CONFIDENCE_THRESHOLD = 0.65
 
 
 @dataclass
@@ -38,29 +44,15 @@ class EvalResult:
     issues: List[str] = field(default_factory=list)
 
 
-def max_possible_score(profile: UserProfile) -> float:
-    """The highest score any song could earn for this profile.
-
-    Genre + mood + a perfect energy match, plus the acoustic bonus only
-    if the user asked for acoustic. Used to normalize confidence so it is
-    comparable across different profiles.
-    """
-    best = ENERGY_WEIGHT  # a perfect energy match is always reachable
-    if profile.favorite_genre:
-        best += GENRE_WEIGHT
-    if profile.favorite_mood:
-        best += MOOD_WEIGHT
-    if profile.likes_acoustic:
-        best += ACOUSTIC_WEIGHT
-    return best
-
-
 def confidence_for(profile: UserProfile, top_score: float) -> float:
-    """Normalize the top score into a 0-1 confidence value."""
-    ceiling = max_possible_score(profile)
-    if ceiling <= 0:
-        return 0.0
-    return round(max(0.0, min(1.0, top_score / ceiling)), 2)
+    """Normalize the top score into a 0-1 confidence value.
+
+    Measured against a perfect match (``FULL_MATCH_SCORE``), so a request
+    that leaves genre or mood unspecified caps out lower than a fully
+    specified one — which is the honest outcome: the less the user told
+    us, the less sure we can be.
+    """
+    return round(max(0.0, min(1.0, top_score / FULL_MATCH_SCORE)), 2)
 
 
 def evaluate(
