@@ -150,6 +150,22 @@ button[data-baseweb="tab"][aria-selected="true"]{ color:#fff; }
 .vf-reasons{ display:flex; flex-wrap:wrap; gap:6px; }
 .vf-rchip{ font-size:.72rem; padding:3px 9px; border-radius:7px; background:rgba(34,211,238,.1); color:#8ee7f7; border:1px solid rgba(34,211,238,.25); white-space:nowrap; }
 
+/* source pills + library panel */
+.vf-src{ font-family:'Space Grotesk',sans-serif; font-size:.6rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+  padding:2px 8px; border-radius:999px; margin-left:9px; white-space:nowrap; }
+.vf-src.lib{ background:rgba(255,45,149,.16); color:#ff8ac4; border:1px solid rgba(255,45,149,.4); }
+.vf-src.sug{ background:rgba(168,85,247,.14); color:#c4b5fd; border:1px solid rgba(168,85,247,.35); }
+.vf-lib{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin:4px 0 2px; }
+.vf-libhead{ font-family:'Space Grotesk',sans-serif; font-weight:700; color:#fff; font-size:1.05rem; margin-bottom:11px; display:flex; align-items:center; gap:8px; }
+.vf-gbreak{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; }
+.vf-gchip{ font-size:.74rem; padding:4px 12px; border-radius:999px; background:rgba(34,211,238,.1); border:1px solid rgba(34,211,238,.25); color:#8ee7f7; }
+.vf-gchip b{ color:#fff; font-family:'Space Grotesk',sans-serif; }
+.vf-track{ display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid var(--line); font-size:.88rem; }
+.vf-track .tname{ color:#fff; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.vf-track .tname span{ color:var(--muted); }
+.vf-track .tplays{ color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.vf-more{ color:var(--muted); font-size:.8rem; margin-top:9px; }
+
 /* expander (trace) */
 [data-testid="stExpander"]{ border:1px solid var(--line)!important; border-radius:12px!important; background:var(--card)!important; }
 [data-testid="stExpander"] summary{ color:var(--muted)!important; font-family:'Space Grotesk',sans-serif; font-weight:600; }
@@ -196,17 +212,48 @@ def render_result(result) -> None:
         unsafe_allow_html=True,
     )
 
+    is_library = result.library_tracks is not None
+
+    # "From your library" panel (library mode only).
+    if is_library:
+        gb = "".join(
+            f'<span class="vf-gchip">{html.escape(g)} · <b>{plays}</b></span>'
+            for g, plays in (result.genre_breakdown or [])
+        )
+        tracks = sorted(result.library_tracks, key=lambda t: t.get("play_count", 0), reverse=True)
+        shown = tracks[:15]
+        rows = "".join(
+            f'<div class="vf-track"><div class="tname">{html.escape(t["title"])} '
+            f'<span>· {html.escape(t["artist"])} · {html.escape(t["genre"] or "—")}</span></div>'
+            f'<div class="tplays">{t.get("play_count", 0)} plays</div></div>'
+            for t in shown
+        )
+        more = (f'<div class="vf-more">+ {len(tracks) - len(shown)} more tracks</div>'
+                if len(tracks) > len(shown) else "")
+        st.markdown(
+            f'<div class="vf-lib"><div class="vf-libhead">🎧 From your library '
+            f'({len(result.library_tracks)} tracks)</div>'
+            f'<div class="vf-gbreak">{gb}</div>{rows}{more}</div>',
+            unsafe_allow_html=True,
+        )
+
     cards = ['<div class="vf-sechead">Recommendations</div>']
     for rank, (song, score, explanation) in enumerate(result.recommendations, start=1):
         reasons = "".join(
             f'<span class="vf-rchip">{html.escape(r.strip())}</span>'
             for r in explanation.split(";") if r.strip()
         )
+        if is_library:
+            pill = ('<span class="vf-src lib">🎧 your library</span>'
+                    if song.get("source") == "library"
+                    else '<span class="vf-src sug">suggested</span>')
+        else:
+            pill = ""
         cards.append(
             f'<div class="vf-song"><div class="vf-rank">{rank}</div>'
             f'<div class="vf-main">'
             f'<div class="vf-row">'
-            f'<div class="vf-names"><div class="vf-title2">{html.escape(song["title"])}</div>'
+            f'<div class="vf-names"><div class="vf-title2">{html.escape(song["title"])}{pill}</div>'
             f'<div class="vf-artist">{html.escape(song["artist"])}</div></div>'
             f'<div class="vf-score">{score:.2f}</div></div>'
             f'<div class="vf-reasons">{reasons}</div></div></div>'

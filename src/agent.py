@@ -27,7 +27,11 @@ from src.recommender import load_songs, recommend_songs, UserProfile
 from src.planner import parse_request, Plan
 from src.evaluator import evaluate, EvalResult, CONFIDENCE_THRESHOLD
 from src.connectors.apple_music import parse_library
-from src.profile_builder import build_plan_from_library
+from src.profile_builder import (
+    build_plan_from_library,
+    library_candidate_songs,
+    genre_breakdown,
+)
 
 MAX_ATTEMPTS = 3
 DEFAULT_CSV = "data/songs.csv"
@@ -66,6 +70,8 @@ class AgentResult:
     attempts: int
     trace: List[str] = field(default_factory=list)
     advisory: Optional[str] = None
+    library_tracks: Optional[List[Dict]] = None    # parsed tracks (library mode only)
+    genre_breakdown: Optional[List] = None          # [(genre, plays)] (library mode only)
 
 
 class RecommenderAgent:
@@ -105,13 +111,20 @@ class RecommenderAgent:
         """
         tracks = parse_library(xml_path)
         plan: Plan = build_plan_from_library(tracks, self.songs, k)
+        # The user's own tracks become candidates too, so they can be ranked.
+        extra = library_candidate_songs(tracks, self.songs)
         label = f"Apple Music library ({os.path.basename(xml_path)}, {len(tracks)} tracks)"
-        return self._execute(plan, label=label)
+        result = self._execute(plan, label=label, extra_songs=extra)
+        result.library_tracks = tracks
+        result.genre_breakdown = genre_breakdown(tracks)
+        return result
 
-    def _execute(self, plan: Plan, label: str) -> AgentResult:
+    def _execute(self, plan: Plan, label: str, extra_songs=None) -> AgentResult:
         query = label
         k = plan.k
         profile = plan.profile
+        # Candidate pool: the catalog, plus any uploaded tracks (library mode).
+        candidates = self.songs + (extra_songs or [])
         self.log.info("PLAN   source=%r -> profile=%s", label, profile)
         for line in plan.trace:
             self.log.info("PLAN     %s", line)
@@ -133,7 +146,7 @@ class RecommenderAgent:
         while attempts < MAX_ATTEMPTS:
             attempts += 1
             prefs = _profile_to_prefs(profile)
-            recs = recommend_songs(prefs, self.songs, k)
+            recs = recommend_songs(prefs, candidates, k)
             result = evaluate(profile, recs, k, self.catalog_genres)
             self.log.info(
                 "ACT    attempt=%d top=%r score=%.2f conf=%.2f passed=%s issues=%s",

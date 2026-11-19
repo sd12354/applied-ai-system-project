@@ -46,6 +46,55 @@ def map_genre(apple_genre: str):
     return None
 
 
+def _genre_energy_means(songs: List[Dict]) -> Dict[str, float]:
+    """Average energy of catalog songs per genre (used to fill in uploads)."""
+    buckets: Dict[str, List[float]] = {}
+    for s in songs:
+        buckets.setdefault(s["genre"], []).append(s["energy"])
+    return {g: round(statistics.mean(v), 2) for g, v in buckets.items()}
+
+
+def genre_breakdown(tracks: List[Dict]) -> List:
+    """Return [(catalog_genre, total_plays)] for a library, most played first."""
+    tally: Dict[str, int] = {}
+    for t in tracks:
+        genre = map_genre(t.get("genre", ""))
+        if genre:
+            tally[genre] = tally.get(genre, 0) + max(0, int(t.get("play_count", 0)))
+    return sorted(tally.items(), key=lambda kv: kv[1], reverse=True)
+
+
+def library_candidate_songs(tracks: List[Dict], songs: List[Dict]) -> List[Dict]:
+    """Turn uploaded tracks into scoreable songs so they can be recommended.
+
+    The export has no energy/mood/acousticness, so we fill energy with the
+    catalog average for the track's genre (the best estimate we have),
+    leave mood blank, and set acousticness to 0. Each song is tagged
+    ``source="library"`` so the UI can mark it as one of the user's own.
+    """
+    means = _genre_energy_means(songs)
+    overall = round(statistics.mean([s["energy"] for s in songs]), 2) if songs else 0.6
+    candidates: List[Dict] = []
+    for i, t in enumerate(tracks):
+        genre = map_genre(t.get("genre", ""))
+        if not genre:
+            continue  # can't place an unknown genre in the scoring space
+        candidates.append({
+            "id": -(i + 1),
+            "title": t.get("title", "Unknown"),
+            "artist": t.get("artist", "Unknown"),
+            "genre": genre,
+            "mood": "",
+            "energy": means.get(genre, overall),
+            "valence": 0.0,
+            "danceability": 0.0,
+            "acousticness": 0.0,
+            "play_count": int(t.get("play_count", 0)),
+            "source": "library",
+        })
+    return candidates
+
+
 def build_plan_from_library(tracks: List[Dict], songs: List[Dict], k: int = 5) -> Plan:
     """Build a Plan (profile + trace) from parsed Apple Music tracks.
 

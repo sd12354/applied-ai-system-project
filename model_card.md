@@ -91,7 +91,10 @@ or two songs, so the catalog is not a balanced sample of musical taste.
   genre and play count, not mood or energy, so a library-built profile
   leans on genre and an inferred energy; mood is left unspecified. Genre
   labels are mapped through a fixed table, so an unusual label (e.g. a niche
-  sub-genre) falls through and is ignored.
+  sub-genre) falls through and is ignored. When the user's own tracks are
+  folded into the ranking, they are scored with an inferred energy (the
+  catalog average for their genre) and no mood/acoustic signal, so that
+  ranking is a genre-and-energy approximation, not a full-feature match.
 
 ---
 

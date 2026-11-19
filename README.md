@@ -37,7 +37,10 @@ plan and re-ranks).
 the agent at a library exported from the macOS Music app
 (`--library Library.xml`). It reads your real listening history — weighting
 genres by play count — and builds your taste profile automatically, then
-runs the same self-checking loop. It uses the Music app's **Export Library**
+runs the same self-checking loop. The web app shows the tracks it parsed
+(with play counts and a genre breakdown) and folds your own songs into the
+ranking, tagged **🎧 your library** vs **suggested**, so you can see both
+your music and new picks. It uses the Music app's **Export Library**
 XML parsed with the standard-library `plistlib`, so there is **no API key,
 no paid Apple Developer account, and nothing leaves your machine** (the
 live MusicKit API needs a $99/yr token; Spotify removed the audio-feature
