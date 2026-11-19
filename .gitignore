@@ -13,3 +13,5 @@ venv/
 
 # Pytest cache
 .pytest_cache/
+# Logs (runtime, not committed except sample evidence)
+logs/*.log
