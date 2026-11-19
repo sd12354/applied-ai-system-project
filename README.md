@@ -2,7 +2,9 @@
 
 An applied-AI system that takes a plain-English request like *"chill lofi
 for studying"* and returns a ranked playlist **with reasons, a confidence
-score, and a record of how it checked its own work.**
+score, and a record of how it checked its own work.** It runs as a
+command-line tool *or* as a **Streamlit web app** (`streamlit run app.py`)
+— both drive the exact same agent.
 
 > **Base project (Modules 1–3):** this extends my Module 3 **Music
 > Recommender Simulation** ([VibeFinder 1.0](#)). That project represented
@@ -85,20 +87,25 @@ python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 2. ask for a recommendation
+# 2. launch the web app (same engine as the CLI, in your browser)
+streamlit run app.py
+
+# --- or use it from the command line ---
+
+# 3. ask for a recommendation
 python -m src.main "chill lofi for studying"
 
-# 3. or run the built-in sample requests
+# 4. or run the built-in sample requests
 python -m src.main
 
-# 4. or use an Apple Music library export (sample file included)
+# 5. or use an Apple Music library export (sample file included)
 python -m src.main --library data/sample_library.xml
 #    on a Mac, export your own first: Music -> File -> Library -> Export Library...
 
-# 5. run the reliability harness (writes assets/evaluation_report.md)
+# 6. run the reliability harness (writes assets/evaluation_report.md)
 python -m src.evaluate
 
-# 6. run the tests
+# 7. run the tests
 pytest
 ```
 
