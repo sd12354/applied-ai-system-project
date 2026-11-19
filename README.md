@@ -1,231 +1,188 @@
-# 🎵 Music Recommender Simulation
+# 🎧 VibeFinder Agent — a self-checking music recommender
 
-## Project Summary
+An applied-AI system that takes a plain-English request like *"chill lofi
+for studying"* and returns a ranked playlist **with reasons, a confidence
+score, and a record of how it checked its own work.**
 
-This is a small **content-based** music recommender. It represents a catalog
-of songs and a user "taste profile" as structured data, scores every song
-against that profile with a linear weighted scoring function I designed, and
-returns the top-ranked songs together with a human-readable explanation of
-*why* each one was selected.
-
-My version, **VibeFinder 1.0**, runs on a catalog of 22 songs across genres
-like pop, lofi, rock, hip hop, jazz, r&b, country and metal. It ranks songs
-by rewarding genre and mood matches and by favoring songs whose energy is
-close to the user's target. Every recommendation ships with its scoring
-rationale, so the model is fully interpretable rather than a black box.
+> **Base project (Modules 1–3):** this extends my Module 3 **Music
+> Recommender Simulation** ([VibeFinder 1.0](#)). That project represented
+> songs and a user "taste profile" as data and used a weighted scoring
+> rule (+2 genre, +1 mood, energy-similarity, acoustic bonus) to rank and
+> explain song recommendations from a fixed profile. This Module 5 version
+> keeps that scoring core and wraps it in an **agentic workflow** that
+> understands natural language, tests itself, and handles bad input safely.
 
 ---
 
-## How The System Works
+## What it does and why it matters
 
-Answering the prompt questions directly.
+The Module 3 version needed a hand-built profile object and always trusted
+its own output. Real recommender front-ends take messy human input and
+have to know when they might be wrong. VibeFinder Agent adds exactly that:
+a planning step that reads free text, and a self-evaluation step that
+scores its own confidence and retries when it falls short — the difference
+between a scoring function and a small *system*.
 
-**What features does each `Song` use in your system?**
-Each `Song` carries two categorical features — `genre` and `mood` — and five
-numeric audio features: `energy`, `valence`, `danceability`, `acousticness`
-(all normalized to [0, 1]) and `tempo_bpm`. The scoring function consumes
-`genre`, `mood`, `energy`, and `acousticness`. `tempo_bpm`, `valence`, and
-`danceability` are carried in the schema but not yet weighted — deferred to
-future work (see below) because they need rescaling or overlap with existing
-signals.
-
-**What information does your `UserProfile` store?**
-Four fields: `favorite_genre`, `favorite_mood`, `target_energy` (a scalar in
-[0, 1], 0 = calm → 1 = intense), and a boolean `likes_acoustic`. It is a
-deliberately low-dimensional representation of taste, which keeps the model
-easy to reason about and explain.
-
-**How does your `Recommender` compute a score for each song? (Algorithm Recipe)**
-The score is a weighted sum of four terms:
-
-- **+2.0** if `song.genre == user.favorite_genre` (exact categorical match).
-- **+1.0** if `song.mood == user.favorite_mood` (exact categorical match).
-- **up to +1.5** for energy proximity. Since both values are in [0, 1], the
-  absolute gap is also in [0, 1], so I award `(1 - gap) × 1.5` — a bounded
-  similarity term that peaks at an exact energy match and decays linearly.
-- **+0.5** if `likes_acoustic` is true **and** `acousticness ≥ 0.6`.
-
-Genre carries the largest weight because it is the dominant signal of taste;
-mood is secondary; energy is modeled as a graded similarity rather than a
-hard equality because "around this energy" reflects real listening intent
-better than exact-match. The weights are hoisted into named module-level
-constants so they're a single point of control for experiments.
-
-**How do you choose which songs to recommend?**
-Score the full catalog, sort descending by score, return the top `k`
-(default 5). Ties fall back to stable sort order. Each result carries the
-list of reason strings that produced its score, which becomes the "because…"
-line — the model is self-explaining by construction.
-
-The categorical/OOP path (`Recommender`, used by the tests) and the
-dict/functional path (`recommend_songs`, used by the CLI) both delegate to a
-single private `_score` helper, so the two interfaces are guaranteed
-consistent rather than two implementations that can drift apart.
-
-```
-UserProfile ─┐
-             ├──> _score() ──> (score, reasons) ──> sort desc ──> top k
-   Song    ─┘        │
-                     ├─ +2.0 genre match
-                     ├─ +1.0 mood match
-                     ├─ up to +1.5 energy proximity  (1 - |Δenergy|) × 1.5
-                     └─ +0.5 acoustic bonus (gated on user preference)
-```
+**Advanced AI feature (required):** this project implements an **Agentic
+Workflow** — the system plans, acts, and checks its own work — and backs
+it with **confidence scoring** and an automated **reliability/testing**
+harness. The agent loop is the main application logic, not a bolt-on: the
+retrieved/parsed intent and the self-check actually change which songs are
+returned (see the "some jazz" example below, where the agent revises its
+plan and re-ranks).
 
 ---
 
-## Getting Started
+## Architecture Overview
 
-### Setup
+![System architecture](assets/architecture.png)
 
-1. Create a virtual environment (optional but recommended):
+*(Mermaid source: [`diagrams/architecture.mmd`](diagrams/architecture.mmd).)*
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
-   ```
+Data flows left to right through a **plan → act → check → revise** loop:
 
-2. Install dependencies
+1. **Planner** (`src/planner.py`) — parses the natural-language request
+   into a `UserProfile` (genre, mood, energy, acoustic). Rule-based, so
+   it's reproducible and free to run.
+2. **Recommender core** (`src/recommender.py`) — the unchanged Module 3
+   engine: scores every song in `data/songs.csv` and ranks them.
+3. **Evaluator** (`src/evaluator.py`) — runs guardrail checks (non-empty,
+   right length, sorted, genre honored) and computes a 0–1 **confidence**
+   score against a perfect match.
+4. **Revise** — if the check fails, the agent adjusts the plan (e.g.
+   re-centers target energy onto the real songs when the user gave no
+   energy cue) and tries again, up to 3 attempts.
+5. **Logger** (`logs/agent.log`) records every plan, action, and check.
+
+The **reliability harness** (`src/evaluate.py`), the **pytest** suite, and
+**human review** of the reports all sit outside the loop and verify it.
+
+---
+
+## Setup
+
+Requires Python 3.9+ and the standard library; `pytest` is the only
+dependency.
 
 ```bash
+# 1. clone, then from the repo root:
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-3. Run the app:
+# 2. ask for a recommendation
+python -m src.main "chill lofi for studying"
 
-```bash
+# 3. or run the built-in sample requests
 python -m src.main
-```
 
-### Running Tests
+# 4. run the reliability harness (writes assets/evaluation_report.md)
+python -m src.evaluate
 
-Run the tests with:
-
-```bash
+# 5. run the tests
 pytest
 ```
 
-There are six tests in `tests/test_recommender.py`: the two starter tests
-plus four I added covering the scoring function, energy proximity, and CSV
-loading/type coercion.
-
 ---
 
-## Sample Recommendation Output
+## Sample Interactions
 
-Real output of `python -m src.main` (trimmed to two of the three profiles):
+**1. A clear request — high confidence, one attempt:**
 
-```
-Loaded 22 songs from the catalog.
-
-============================================================
-Profile: High-Energy Pop
-  wants genre=pop, mood=happy, energy=0.85, likes_acoustic=False
-------------------------------------------------------------
-1. Sunrise City by Neon Echo  (score 4.46)
-   because: genre match: pop (+2.0); mood match: happy (+1.0); energy fits (gap 0.03, +1.46)
-2. Pop Quiz by Max Pulse  (score 4.41)
-   because: genre match: pop (+2.0); mood match: happy (+1.0); energy fits (gap 0.06, +1.41)
-3. Gym Hero by Max Pulse  (score 3.38)
-   because: genre match: pop (+2.0); energy fits (gap 0.08, +1.38)
-4. Rooftop Lights by Indigo Parade  (score 2.36)
-   because: mood match: happy (+1.0); energy fits (gap 0.09, +1.36)
-5. Paper Planes Again by Indigo Parade  (score 2.25)
-   because: mood match: happy (+1.0); energy fits (gap 0.17, +1.25)
-
-============================================================
-Profile: Chill Lofi
-  wants genre=lofi, mood=chill, energy=0.35, likes_acoustic=True
-------------------------------------------------------------
-1. Library Rain by Paper Lanterns  (score 5.00)
-   because: genre match: lofi (+2.0); mood match: chill (+1.0); energy fits (gap 0.00, +1.50); acoustic vibe (+0.5)
-2. Midnight Coding by LoRoom  (score 4.90)
-   because: genre match: lofi (+2.0); mood match: chill (+1.0); energy fits (gap 0.07, +1.40); acoustic vibe (+0.5)
-3. Focus Flow by LoRoom  (score 3.92)
-   because: genre match: lofi (+2.0); energy fits (gap 0.05, +1.42); acoustic vibe (+0.5)
-4. Spacewalk Thoughts by Orbit Bloom  (score 2.90)
-   because: mood match: chill (+1.0); energy fits (gap 0.07, +1.40); acoustic vibe (+0.5)
-5. Coffee Shop Stories by Slow Stereo  (score 1.97)
-   because: energy fits (gap 0.02, +1.47); acoustic vibe (+0.5)
+```text
+Request: "upbeat pop for a workout"
+  understood as: genre=pop, mood=happy, energy=0.9, acoustic=False
+  confidence: 0.88   attempts: 1   passed checks: True
+----------------------------------------------------------------
+1. Sunrise City by Neon Echo  (score 4.38)
+   because: genre match: pop (+2.0); mood match: happy (+1.0); energy fits (gap 0.08, +1.38)
+2. Pop Quiz by Max Pulse  (score 4.33)
+   because: genre match: pop (+2.0); mood match: happy (+1.0); energy fits (gap 0.11, +1.33)
+3. Gym Hero by Max Pulse  (score 3.46)
+   because: genre match: pop (+2.0); energy fits (gap 0.03, +1.46)
 ```
 
-The third profile, **Deep Intense Rock** (genre=rock, mood=intense,
-energy=0.95), correctly ranks *Storm Runner* (rock/intense) first at 4.44.
+**2. A request the agent self-corrects** — no energy was given, so the
+first attempt is under-confident; the agent re-centers energy and retries:
+
+```text
+Request: "some jazz"
+  understood as: genre=jazz, mood=-, energy=0.35, acoustic=False
+  confidence: 0.69   attempts: 2   passed checks: True
+----------------------------------------------------------------
+1. Coffee Shop Stories by Slow Stereo  (score 3.47)
+   because: genre match: jazz (+2.0); energy fits (gap 0.02, +1.47)
+2. Grandma's Record Player by Slow Stereo  (score 3.47)
+   because: genre match: jazz (+2.0); energy fits (gap 0.02, +1.47)
+  trace:
+    - Attempt 1: top='Coffee Shop Stories' confidence=0.63 passed=False issues=['low confidence 0.63 (< 0.65)']
+    - Revise: no energy given, re-centering target energy 0.6 -> 0.35 (mean of matching songs) and retrying.
+    - Attempt 2: top='Coffee Shop Stories' confidence=0.69 passed=True
+```
+
+**3. Vague input — handled safely, not crashed:**
+
+```text
+Request: "asdf qwerty"
+  understood as: genre=-, mood=-, energy=0.6, acoustic=False
+  confidence: 0.29   attempts: 1   passed checks: False
+  note: Your request was vague, so this is a neutral mix. Name a genre,
+        mood, or vibe (e.g. 'chill lofi for studying') for a sharper match.
+```
+
+More captured output is in [`assets/sample_run.txt`](assets/sample_run.txt)
+and a full self-correction log in
+[`assets/sample_agent_log.txt`](assets/sample_agent_log.txt).
 
 ---
 
-## Experiments You Tried
+## Design Decisions and Trade-offs
 
-**What happened when you changed the weight on genre from 2.0 to 0.5?**
-At `GENRE_WEIGHT = 2.0`, the High-Energy Pop user's top 5 is saturated with
-pop and indie-pop, and *Gym Hero* (pop, but `mood=intense`) still makes the
-cut on genre + energy alone. Dropping the weight to 0.5 shifts the ranking:
-*Gym Hero* drops out and *Open Highway* (a **country** track that is happy
-and mid-energy) moves in. Concretely, the genre term is a precision/recall
-knob — a high weight biases toward intra-genre precision ("stay in my lane"),
-a low weight increases cross-genre recall ("surface adjacent genres that
-still fit mood and energy"). This is the classic exploration/exploitation
-trade-off in miniature.
-
-**What happened when you added tempo or valence to the score?**
-I prototyped both and intentionally excluded them from the final recipe.
-`tempo_bpm` lives on a ~60–170 scale, so without feature scaling it would
-dominate the [0, 1] terms and effectively reduce the model to a tempo sort —
-it needs min-max normalization before it's usable. `valence` is strongly
-collinear with `mood`, so adding it mostly double-counted the mood signal
-rather than contributing independent information. Keeping the feature set to
-genre + mood + energy + acousticness preserved interpretability and avoided
-redundant terms, so I logged both as future work.
-
-**How did your system behave for different types of users?**
-Across the three profiles the top-5 lists are nearly disjoint, which
-confirms the model is conditioning on the profile rather than collapsing to a
-popularity prior. The `likes_acoustic` flag also measurably shifts ranking
-for the lofi user — enabling it promotes acoustic tracks above otherwise
-comparable non-acoustic ones. Because it contributes only +0.5, it functions
-as a tie-breaker and never overrides the genre or mood terms, which is the
-intended behavior.
+- **Rule-based planner instead of an LLM call.** The planner maps keywords
+  to profile fields rather than calling a language model. **Trade-off:** it
+  only understands a fixed vocabulary, but the whole system is free,
+  offline, deterministic, and reproducible by a grader with no API key —
+  which matters more for this project than handling arbitrary phrasing.
+- **Reused the Module 3 scoring core untouched.** The agent wraps the
+  original recommender rather than rewriting it, so the earlier work stays
+  intact and the new value is clearly the agentic layer.
+- **Confidence against a fixed "perfect match" ceiling.** This makes a
+  vague request honestly score low instead of looking falsely certain.
+  **Trade-off:** a request that omits genre can't reach high confidence
+  even if the songs are reasonable — which is the behavior I wanted.
+- **Revision = re-centering energy, with a hard 3-attempt cap.** A bounded,
+  explainable fix beats an open-ended search. **Trade-off:** it won't
+  rescue a genuinely unanswerable request; it flags low confidence instead.
 
 ---
 
-## Limitations and Risks
+## Testing Summary
 
-- **Small catalog / cold-start.** With only 22 songs there are few true genre
-  matches, so lower ranks lean disproportionately on the energy term.
-- **Exact-match categoricals.** "indie pop" and "pop" are distinct tokens, so
-  the model gets no notion of genre adjacency or similarity.
-- **No audio/NLP understanding.** It never processes waveforms or lyrics; it
-  trusts hand-authored feature values in the CSV.
-- **No popularity or novelty signal**, so it can't surface genuinely new
-  material or weight by what's trending.
-- **Popularity/overfitting bias.** Because genre is the heaviest term, a user
-  with a strong genre preference can receive a homogeneous top 5 — a
-  small-scale instance of the filter-bubble / feedback-loop problem.
-
-The model card expands on the bias analysis.
+- **Automated tests:** `pytest` → **18/18 passing**, covering the scoring
+  core, natural-language parsing, the guardrail/confidence checks, the
+  agent's retry-based self-correction, empty-input handling, and the retry
+  cap.
+- **Reliability harness:** `python -m src.evaluate` runs 8 requests
+  (including empty and nonsense edge cases) → **8/8 handled correctly**,
+  **1 solved only after a self-correcting retry**, average confidence
+  **0.74** (excluding empty input). Full table:
+  [`assets/evaluation_report.md`](assets/evaluation_report.md).
+- **What I learned:** the system is strong on clear requests and degrades
+  honestly on vague ones. The weak spot is the planner's fixed vocabulary —
+  a synonym it doesn't know (e.g. "hype music") is silently missed. The
+  confidence score and advisory are what keep that failure visible instead
+  of hidden.
 
 ---
 
 ## Reflection
 
-**What did you learn about how recommenders turn data into predictions?**
-The core realization is that a content-based recommender is, mechanically,
-just a scoring function plus a sort — the "intelligence" is entirely encoded
-in the weights, and every weight is a design decision rather than an
-objective fact. Setting genre to 2.0 and mood to 1.0 is a value judgment that
-directly determines which songs win, and I could watch the ranking change as
-I tuned it. Building the explanation strings alongside the score was the most
-valuable part: making the model self-explaining turned debugging into reading
-a sentence instead of reverse-engineering a number.
+Extending the recommender taught me that the jump from a *function* to a
+*system* is mostly about humility: the new code is almost entirely about
+the program knowing when it might be wrong and saying so. The hardest part
+wasn't the recommendations — that was Module 3 — it was designing a
+confidence number and a retry that were honest rather than flattering.
 
-**What did you learn about where bias or unfairness could show up in systems like this?**
-Bias enters from two independent sources: the scoring function and the
-training/catalog distribution. An underrepresented genre essentially cannot
-win regardless of a user's stated preference, so a skewed dataset produces
-unfair outcomes even with a "correct" formula — data imbalance is as decisive
-as the model itself. And because the objective rewards similarity to existing
-preferences, repeated use induces a feedback loop that narrows exposure over
-time. Observing that dynamic on a 22-song toy catalog made it concrete how a
-production system trained on millions of interactions can systematically
-reinforce filter bubbles.
+> My graded responsible-AI reflection — how I worked with AI, one
+> suggestion I accepted and one I rejected, bias, and limitations — is in
+> [`model_card.md`](model_card.md), as the rubric requires.
