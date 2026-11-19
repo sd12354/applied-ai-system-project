@@ -1,0 +1,11 @@
+# Sample Agent Log — the 'some jazz' request
+# Shows the plan -> act -> (fail) -> revise -> act -> pass loop.
+# Source: logs/agent.log (regenerated at runtime; this is a captured copy).
+
+2026-11-18 23:45:25,469 | INFO | PLAN   query='some jazz' -> profile=UserProfile(favorite_genre='jazz', favorite_mood='', target_energy=0.6, likes_acoustic=False)
+2026-11-18 23:45:25,469 | INFO | PLAN     genre -> 'jazz' (matched a genre word)
+2026-11-18 23:45:25,469 | INFO | PLAN     energy -> 0.6 (default, no energy cue found)
+2026-11-18 23:45:25,469 | INFO | ACT    attempt=1 top='Coffee Shop Stories' score=3.16 conf=0.63 passed=False issues=['low confidence 0.63 (< 0.65)']
+2026-11-18 23:45:25,469 | INFO | REVISE   Revise: no energy given, re-centering target energy 0.6 -> 0.35 (mean of matching songs) and retrying.
+2026-11-18 23:45:25,469 | INFO | ACT    attempt=2 top='Coffee Shop Stories' score=3.47 conf=0.69 passed=True issues=[]
+2026-11-18 23:45:25,469 | INFO | DONE   query='some jazz' attempts=2 confidence=0.69 passed=True

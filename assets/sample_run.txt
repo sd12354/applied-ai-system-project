@@ -1,0 +1,141 @@
+# Sample Run — VibeFinder Agent
+
+Captured from: python -m src.main  (and two one-shot queries)
+Reproduce with the same commands from the repo root.
+
+```text
+================================================================
+Request: "upbeat pop for a workout"
+  understood as: genre=pop, mood=happy, energy=0.9, acoustic=False
+  confidence: 0.88   attempts: 1   passed checks: True
+----------------------------------------------------------------
+1. Sunrise City by Neon Echo  (score 4.38)
+   because: genre match: pop (+2.0); mood match: happy (+1.0); energy fits (gap 0.08, +1.38)
+2. Pop Quiz by Max Pulse  (score 4.33)
+   because: genre match: pop (+2.0); mood match: happy (+1.0); energy fits (gap 0.11, +1.33)
+3. Gym Hero by Max Pulse  (score 3.46)
+   because: genre match: pop (+2.0); energy fits (gap 0.03, +1.46)
+4. Rooftop Lights by Indigo Parade  (score 2.29)
+   because: mood match: happy (+1.0); energy fits (gap 0.14, +1.29)
+5. Paper Planes Again by Indigo Parade  (score 2.17)
+   because: mood match: happy (+1.0); energy fits (gap 0.22, +1.17)
+  trace:
+    - Plan: genre -> 'pop' (matched a genre word); mood -> 'happy' (matched a mood word); energy -> 0.9 (context word implied this)
+    - Attempt 1: top='Sunrise City' confidence=0.88 passed=True
+
+================================================================
+Request: "chill lofi for studying"
+  understood as: genre=lofi, mood=chill, energy=0.3, acoustic=False
+  confidence: 0.88   attempts: 1   passed checks: True
+----------------------------------------------------------------
+1. Library Rain by Paper Lanterns  (score 4.42)
+   because: genre match: lofi (+2.0); mood match: chill (+1.0); energy fits (gap 0.05, +1.42)
+2. Midnight Coding by LoRoom  (score 4.32)
+   because: genre match: lofi (+2.0); mood match: chill (+1.0); energy fits (gap 0.12, +1.32)
+3. Focus Flow by LoRoom  (score 3.35)
+   because: genre match: lofi (+2.0); energy fits (gap 0.10, +1.35)
+4. Spacewalk Thoughts by Orbit Bloom  (score 2.47)
+   because: mood match: chill (+1.0); energy fits (gap 0.02, +1.47)
+5. Grandma's Record Player by Slow Stereo  (score 1.46)
+   because: energy fits (gap 0.03, +1.46)
+  trace:
+    - Plan: genre -> 'lofi' (matched a genre word); mood -> 'chill' (matched a mood word); energy -> 0.3 (context word implied this)
+    - Attempt 1: top='Library Rain' confidence=0.88 passed=True
+
+================================================================
+Request: "some jazz"
+  understood as: genre=jazz, mood=-, energy=0.35, acoustic=False
+  confidence: 0.69   attempts: 2   passed checks: True
+----------------------------------------------------------------
+1. Coffee Shop Stories by Slow Stereo  (score 3.47)
+   because: genre match: jazz (+2.0); energy fits (gap 0.02, +1.47)
+2. Grandma's Record Player by Slow Stereo  (score 3.47)
+   because: genre match: jazz (+2.0); energy fits (gap 0.02, +1.47)
+3. Library Rain by Paper Lanterns  (score 1.50)
+   because: energy fits (gap 0.00, +1.50)
+4. Focus Flow by LoRoom  (score 1.42)
+   because: energy fits (gap 0.05, +1.42)
+5. Midnight Coding by LoRoom  (score 1.40)
+   because: energy fits (gap 0.07, +1.40)
+  trace:
+    - Plan: genre -> 'jazz' (matched a genre word); energy -> 0.6 (default, no energy cue found)
+    - Attempt 1: top='Coffee Shop Stories' confidence=0.63 passed=False issues=['low confidence 0.63 (< 0.65)']
+    - Revise: no energy given, re-centering target energy 0.6 -> 0.35 (mean of matching songs) and retrying.
+    - Attempt 2: top='Coffee Shop Stories' confidence=0.69 passed=True
+
+================================================================
+Request: ""
+  understood as: genre=-, mood=-, energy=0.6, acoustic=False
+  confidence: 0.29   attempts: 1   passed checks: False
+  note: Your request was vague, so this is a neutral mix. Name a genre, mood, or vibe (e.g. 'chill lofi for studying') for a sharper match.
+----------------------------------------------------------------
+1. Open Highway by Copper Canyon  (score 1.44)
+   because: energy fits (gap 0.04, +1.44)
+2. Paper Planes Again by Indigo Parade  (score 1.38)
+   because: energy fits (gap 0.08, +1.38)
+3. Velvet Hours by Dusk Collective  (score 1.38)
+   because: energy fits (gap 0.08, +1.38)
+4. Trailhead by Copper Canyon  (score 1.35)
+   because: energy fits (gap 0.10, +1.35)
+5. Deadline Panic by Low End Theory  (score 1.32)
+   because: energy fits (gap 0.12, +1.32)
+  trace:
+    - Plan: energy -> 0.6 (default, no energy cue found); no genre/mood/energy cues recognized -> using a neutral profile
+    - Guardrail: request not recognized -> neutral profile, advisory attached.
+    - Attempt 1: top='Open Highway' confidence=0.29 passed=False issues=['low confidence 0.29 (< 0.65)']
+    - Revise: no further revision available -> returning best effort.
+
+```
+
+## One-shot: a request the agent self-corrects
+
+```text
+================================================================
+Request: "some jazz"
+  understood as: genre=jazz, mood=-, energy=0.35, acoustic=False
+  confidence: 0.69   attempts: 2   passed checks: True
+----------------------------------------------------------------
+1. Coffee Shop Stories by Slow Stereo  (score 3.47)
+   because: genre match: jazz (+2.0); energy fits (gap 0.02, +1.47)
+2. Grandma's Record Player by Slow Stereo  (score 3.47)
+   because: genre match: jazz (+2.0); energy fits (gap 0.02, +1.47)
+3. Library Rain by Paper Lanterns  (score 1.50)
+   because: energy fits (gap 0.00, +1.50)
+4. Focus Flow by LoRoom  (score 1.42)
+   because: energy fits (gap 0.05, +1.42)
+5. Midnight Coding by LoRoom  (score 1.40)
+   because: energy fits (gap 0.07, +1.40)
+  trace:
+    - Plan: genre -> 'jazz' (matched a genre word); energy -> 0.6 (default, no energy cue found)
+    - Attempt 1: top='Coffee Shop Stories' confidence=0.63 passed=False issues=['low confidence 0.63 (< 0.65)']
+    - Revise: no energy given, re-centering target energy 0.6 -> 0.35 (mean of matching songs) and retrying.
+    - Attempt 2: top='Coffee Shop Stories' confidence=0.69 passed=True
+
+```
+
+## One-shot: vague input is handled, not crashed
+
+```text
+================================================================
+Request: "asdf qwerty"
+  understood as: genre=-, mood=-, energy=0.6, acoustic=False
+  confidence: 0.29   attempts: 1   passed checks: False
+  note: Your request was vague, so this is a neutral mix. Name a genre, mood, or vibe (e.g. 'chill lofi for studying') for a sharper match.
+----------------------------------------------------------------
+1. Open Highway by Copper Canyon  (score 1.44)
+   because: energy fits (gap 0.04, +1.44)
+2. Paper Planes Again by Indigo Parade  (score 1.38)
+   because: energy fits (gap 0.08, +1.38)
+3. Velvet Hours by Dusk Collective  (score 1.38)
+   because: energy fits (gap 0.08, +1.38)
+4. Trailhead by Copper Canyon  (score 1.35)
+   because: energy fits (gap 0.10, +1.35)
+5. Deadline Panic by Low End Theory  (score 1.32)
+   because: energy fits (gap 0.12, +1.32)
+  trace:
+    - Plan: energy -> 0.6 (default, no energy cue found); no genre/mood/energy cues recognized -> using a neutral profile
+    - Guardrail: request not recognized -> neutral profile, advisory attached.
+    - Attempt 1: top='Open Highway' confidence=0.29 passed=False issues=['low confidence 0.29 (< 0.65)']
+    - Revise: no further revision available -> returning best effort.
+
+```
