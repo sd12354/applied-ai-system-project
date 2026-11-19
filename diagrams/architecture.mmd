@@ -4,9 +4,15 @@
 
 flowchart TD
     User["User<br/>natural-language request<br/>(e.g. 'chill lofi for studying')"]
+    Library[("Apple Music export<br/>Library.xml")]
+
+    subgraph Inputs["Two ways in"]
+        Planner["Planner<br/>parse text -> UserProfile<br/>(genre, mood, energy, acoustic)"]
+        AppleMusic["Apple Music connector<br/>parse Library.xml (plistlib)"]
+        ProfileBuilder["Profile builder<br/>play-count-weighted genre<br/>-> UserProfile"]
+    end
 
     subgraph Agent["RecommenderAgent — plan / act / check / revise loop"]
-        Planner["Planner<br/>parse text -> UserProfile<br/>(genre, mood, energy, acoustic)"]
         Recommender["Recommender core (Module 3)<br/>weighted scoring + ranking"]
         Evaluator["Evaluator<br/>guardrail checks + confidence score"]
         Decision{"Passed checks<br/>AND confident?"}
@@ -18,11 +24,15 @@ flowchart TD
     Output["Answer<br/>ranked songs + reasons<br/>+ confidence + advisory"]
 
     Harness["Reliability harness<br/>src/evaluate.py<br/>-> assets/evaluation_report.md"]
-    Tests["Automated tests<br/>pytest (18 checks)"]
+    Tests["Automated tests<br/>pytest (22 checks)"]
     Human["Human review<br/>reads report + sample runs"]
 
     User --> Planner
+    Library --> AppleMusic
+    AppleMusic --> ProfileBuilder
     Planner --> Recommender
+    ProfileBuilder --> Recommender
+    Catalog --> ProfileBuilder
     Catalog --> Recommender
     Recommender --> Evaluator
     Evaluator --> Decision
