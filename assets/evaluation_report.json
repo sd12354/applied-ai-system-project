@@ -1,0 +1,92 @@
+{
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "self_corrected_via_retry": 1,
+    "avg_confidence_excluding_empty": 0.74
+  },
+  "cases": [
+    {
+      "query": "upbeat pop for a workout",
+      "expected": "top genre = pop",
+      "top_pick": "Sunrise City",
+      "top_genre": "pop",
+      "confidence": 0.88,
+      "attempts": 1,
+      "passed_checks": true,
+      "result": "PASS"
+    },
+    {
+      "query": "chill lofi for studying",
+      "expected": "top genre = lofi",
+      "top_pick": "Library Rain",
+      "top_genre": "lofi",
+      "confidence": 0.88,
+      "attempts": 1,
+      "passed_checks": true,
+      "result": "PASS"
+    },
+    {
+      "query": "intense rock music",
+      "expected": "top genre = rock",
+      "top_pick": "Storm Runner",
+      "top_genre": "rock",
+      "confidence": 0.81,
+      "attempts": 1,
+      "passed_checks": true,
+      "result": "PASS"
+    },
+    {
+      "query": "romantic r&b",
+      "expected": "top genre = r&b",
+      "top_pick": "Velvet Hours",
+      "top_genre": "r&b",
+      "confidence": 0.88,
+      "attempts": 1,
+      "passed_checks": true,
+      "result": "PASS"
+    },
+    {
+      "query": "acoustic country roadtrip",
+      "expected": "top genre = country",
+      "top_pick": "Trailhead",
+      "top_genre": "country",
+      "confidence": 0.77,
+      "attempts": 1,
+      "passed_checks": true,
+      "result": "PASS"
+    },
+    {
+      "query": "some jazz",
+      "expected": "top genre = jazz",
+      "top_pick": "Coffee Shop Stories",
+      "top_genre": "jazz",
+      "confidence": 0.69,
+      "attempts": 2,
+      "passed_checks": true,
+      "result": "PASS"
+    },
+    {
+      "query": "(empty)",
+      "expected": "handled gracefully",
+      "top_pick": "Open Highway",
+      "top_genre": "country",
+      "confidence": 0.29,
+      "attempts": 1,
+      "passed_checks": false,
+      "result": "PASS"
+    },
+    {
+      "query": "qwerty blah blah",
+      "expected": "handled gracefully",
+      "top_pick": "Open Highway",
+      "top_genre": "country",
+      "confidence": 0.29,
+      "attempts": 1,
+      "passed_checks": false,
+      "result": "PASS"
+    }
+  ]
+}
