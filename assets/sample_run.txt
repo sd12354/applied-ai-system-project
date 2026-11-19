@@ -1,7 +1,8 @@
 # Sample Run — VibeFinder Agent
 
-Captured from: python -m src.main  (and two one-shot queries)
-Reproduce with the same commands from the repo root.
+Reproduce from the repo root with the commands shown before each block.
+
+## Text requests:  python -m src.main
 
 ```text
 ================================================================
@@ -87,7 +88,7 @@ Request: ""
 
 ```
 
-## One-shot: a request the agent self-corrects
+## Self-correcting retry:  python -m src.main "some jazz"
 
 ```text
 ================================================================
@@ -113,7 +114,31 @@ Request: "some jazz"
 
 ```
 
-## One-shot: vague input is handled, not crashed
+## Apple Music integration:  python -m src.main --library data/sample_library.xml
+
+```text
+================================================================
+Request: "Apple Music library (sample_library.xml, 8 tracks)"
+  understood as: genre=pop, mood=-, energy=0.85, acoustic=False
+  confidence: 0.69   attempts: 1   passed checks: True
+----------------------------------------------------------------
+1. Sunrise City by Neon Echo  (score 3.46)
+   because: genre match: pop (+2.0); energy fits (gap 0.03, +1.46)
+2. Pop Quiz by Max Pulse  (score 3.41)
+   because: genre match: pop (+2.0); energy fits (gap 0.06, +1.41)
+3. Gym Hero by Max Pulse  (score 3.38)
+   because: genre match: pop (+2.0); energy fits (gap 0.08, +1.38)
+4. Concrete Jungle by Low End Theory  (score 1.48)
+   because: energy fits (gap 0.01, +1.48)
+5. Last Call by Voltline  (score 1.43)
+   because: energy fits (gap 0.05, +1.43)
+  trace:
+    - Plan: Analyzed 8 tracks from the Apple Music library.; Plays by genre: pop=163, indie pop=41, jazz=33, hip hop=27, rock=19, r&b=14.; Top genre by play count -> 'pop'.; Target energy -> 0.85 (average energy of pop songs in the catalog).
+    - Attempt 1: top='Sunrise City' confidence=0.69 passed=True
+
+```
+
+## Vague input is handled, not crashed:  python -m src.main "asdf qwerty"
 
 ```text
 ================================================================

@@ -31,6 +31,17 @@ retrieved/parsed intent and the self-check actually change which songs are
 returned (see the "some jazz" example below, where the agent revises its
 plan and re-ranks).
 
+**Apple Music integration:** instead of typing a request, you can point
+the agent at a library exported from the macOS Music app
+(`--library Library.xml`). It reads your real listening history — weighting
+genres by play count — and builds your taste profile automatically, then
+runs the same self-checking loop. It uses the Music app's **Export Library**
+XML parsed with the standard-library `plistlib`, so there is **no API key,
+no paid Apple Developer account, and nothing leaves your machine** (the
+live MusicKit API needs a $99/yr token; Spotify removed the audio-feature
+endpoints a recommender needs). A small synthetic `data/sample_library.xml`
+is included so the feature runs out of the box.
+
 ---
 
 ## Architecture Overview
@@ -39,11 +50,15 @@ plan and re-ranks).
 
 *(Mermaid source: [`diagrams/architecture.mmd`](diagrams/architecture.mmd).)*
 
-Data flows left to right through a **plan → act → check → revise** loop:
+There are **two ways in** — a typed request or an Apple Music library —
+and both feed the same **plan → act → check → revise** loop:
 
-1. **Planner** (`src/planner.py`) — parses the natural-language request
-   into a `UserProfile` (genre, mood, energy, acoustic). Rule-based, so
-   it's reproducible and free to run.
+0. **Apple Music connector + profile builder** (`src/connectors/apple_music.py`,
+   `src/profile_builder.py`) — optional input path: parse an exported
+   `Library.xml` and infer a `UserProfile` from play-count-weighted genres.
+1. **Planner** (`src/planner.py`) — the text path: parses a natural-language
+   request into a `UserProfile` (genre, mood, energy, acoustic). Rule-based,
+   so it's reproducible and free to run.
 2. **Recommender core** (`src/recommender.py`) — the unchanged Module 3
    engine: scores every song in `data/songs.csv` and ranks them.
 3. **Evaluator** (`src/evaluator.py`) — runs guardrail checks (non-empty,
@@ -76,10 +91,14 @@ python -m src.main "chill lofi for studying"
 # 3. or run the built-in sample requests
 python -m src.main
 
-# 4. run the reliability harness (writes assets/evaluation_report.md)
+# 4. or use an Apple Music library export (sample file included)
+python -m src.main --library data/sample_library.xml
+#    on a Mac, export your own first: Music -> File -> Library -> Export Library...
+
+# 5. run the reliability harness (writes assets/evaluation_report.md)
 python -m src.evaluate
 
-# 5. run the tests
+# 6. run the tests
 pytest
 ```
 
@@ -120,7 +139,24 @@ Request: "some jazz"
     - Attempt 2: top='Coffee Shop Stories' confidence=0.69 passed=True
 ```
 
-**3. Vague input — handled safely, not crashed:**
+**3. Apple Music library — profile built from listening history:**
+
+```text
+Request: "Apple Music library (sample_library.xml, 8 tracks)"
+  understood as: genre=pop, mood=-, energy=0.85, acoustic=False
+  confidence: 0.69   attempts: 1   passed checks: True
+----------------------------------------------------------------
+1. Sunrise City by Neon Echo  (score 3.46)
+   because: genre match: pop (+2.0); energy fits (gap 0.03, +1.46)
+2. Pop Quiz by Max Pulse  (score 3.41)
+   because: genre match: pop (+2.0); energy fits (gap 0.06, +1.41)
+  trace:
+    - Plan: Analyzed 8 tracks...; Plays by genre: pop=163, indie pop=41, jazz=33,
+      hip hop=27, rock=19, r&b=14.; Top genre by play count -> 'pop'.;
+      Target energy -> 0.85 (average energy of pop songs in the catalog).
+```
+
+**4. Vague input — handled safely, not crashed:**
 
 ```text
 Request: "asdf qwerty"
@@ -158,10 +194,11 @@ and a full self-correction log in
 
 ## Testing Summary
 
-- **Automated tests:** `pytest` → **18/18 passing**, covering the scoring
+- **Automated tests:** `pytest` → **22/22 passing**, covering the scoring
   core, natural-language parsing, the guardrail/confidence checks, the
-  agent's retry-based self-correction, empty-input handling, and the retry
-  cap.
+  agent's retry-based self-correction, empty-input handling, the retry cap,
+  and the Apple Music connector (parsing, genre mapping, profile building,
+  empty-library fallback).
 - **Reliability harness:** `python -m src.evaluate` runs 8 requests
   (including empty and nonsense edge cases) → **8/8 handled correctly**,
   **1 solved only after a self-correcting retry**, average confidence

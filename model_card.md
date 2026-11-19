@@ -26,8 +26,15 @@ a small, hand-authored catalog and a user who can describe a vibe in words.
 
 ## 3. How the Model Works
 
-A request flows through a four-step loop. First a **planner** reads the text
-and fills in a taste profile (genre, mood, energy, acoustic). Then the
+There are two ways to start a request: typing one, or pointing the system
+at an **Apple Music library export** (`Library.xml` from the Music app),
+which the connector parses locally with `plistlib` and turns into a profile
+weighted by how often you actually play each genre — no API key or paid
+developer account required.
+
+From there a request flows through a four-step loop. First a **planner**
+(for text) or the **profile builder** (for a library) fills in a taste
+profile (genre, mood, energy, acoustic). Then the
 **Module 3 recommender** scores and ranks the catalog against that profile
 (+2 for a genre match, +1 for mood, up to +1.5 for how close a song's energy
 is, +0.5 for acoustic when asked). An **evaluator** then checks the result
@@ -80,14 +87,20 @@ or two songs, so the catalog is not a balanced sample of musical taste.
   effect real recommenders are criticized for.
 - **Confidence is a heuristic**, not a probability — it measures closeness
   to a perfect feature match, not real user satisfaction.
+- **Apple Music profiles are genre-driven.** The library export carries only
+  genre and play count, not mood or energy, so a library-built profile
+  leans on genre and an inferred energy; mood is left unspecified. Genre
+  labels are mapped through a fixed table, so an unusual label (e.g. a niche
+  sub-genre) falls through and is ignored.
 
 ---
 
 ## 7. Evaluation / Testing Results
 
-- **Automated tests:** `pytest` → **18/18 passing** across the scoring core,
-  the planner, the evaluator, and the agent (including the retry-based
-  self-correction, empty-input handling, and the retry cap).
+- **Automated tests:** `pytest` → **22/22 passing** across the scoring core,
+  the planner, the evaluator, the agent (including the retry-based
+  self-correction, empty-input handling, and the retry cap), and the Apple
+  Music connector (parsing, genre mapping, profile building, empty library).
 - **Reliability harness:** `python -m src.evaluate` runs **8 requests**
   (clear requests plus empty and nonsense edge cases) and grades each
   against an expectation → **8/8 handled correctly**, **1 solved only after
