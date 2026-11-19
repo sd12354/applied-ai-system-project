@@ -1,0 +1,41 @@
+%% VibeFinder Agent — system architecture
+%% Render at https://mermaid.live or with the Mermaid CLI (mmdc).
+%% Data flow: natural-language request -> plan -> act -> self-check -> (revise) -> answer
+
+flowchart TD
+    User["User<br/>natural-language request<br/>(e.g. 'chill lofi for studying')"]
+
+    subgraph Agent["RecommenderAgent — plan / act / check / revise loop"]
+        Planner["Planner<br/>parse text -> UserProfile<br/>(genre, mood, energy, acoustic)"]
+        Recommender["Recommender core (Module 3)<br/>weighted scoring + ranking"]
+        Evaluator["Evaluator<br/>guardrail checks + confidence score"]
+        Decision{"Passed checks<br/>AND confident?"}
+        Revise["Revise plan<br/>(re-center energy, relax)<br/>max 3 attempts"]
+    end
+
+    Catalog[("Song catalog<br/>data/songs.csv")]
+    Logger["Logger<br/>logs/agent.log<br/>(plan, actions, checks)"]
+    Output["Answer<br/>ranked songs + reasons<br/>+ confidence + advisory"]
+
+    Harness["Reliability harness<br/>src/evaluate.py<br/>-> assets/evaluation_report.md"]
+    Tests["Automated tests<br/>pytest (18 checks)"]
+    Human["Human review<br/>reads report + sample runs"]
+
+    User --> Planner
+    Planner --> Recommender
+    Catalog --> Recommender
+    Recommender --> Evaluator
+    Evaluator --> Decision
+    Decision -- "no" --> Revise
+    Revise --> Recommender
+    Decision -- "yes / out of attempts" --> Output
+
+    Planner -.log.-> Logger
+    Recommender -.log.-> Logger
+    Evaluator -.log.-> Logger
+    Revise -.log.-> Logger
+
+    Harness --> Agent
+    Harness --> Human
+    Tests --> Agent
+    Output --> User
